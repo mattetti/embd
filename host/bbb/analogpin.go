@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kidoman/embd"
+	"github.com/mattetti/embd"
 )
 
 type analogPin struct {

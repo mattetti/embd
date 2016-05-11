@@ -5,9 +5,12 @@ package embd
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/golang/glog"
 )
+
+var mu sync.RWMutex
 
 // Descriptor represents a host descriptor.
 type Descriptor struct {
@@ -23,6 +26,14 @@ type Describer func(rev int) *Descriptor
 // Describers is a global list of registered host Describers.
 var describers = make(map[Host]Describer)
 
+// HostDescriber accesses the description of a host in a thread safe manner
+func HostDescriber(host Host) (Describer, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	d, ok := describers[host]
+	return d, ok
+}
+
 // Register makes a host describer available by the provided host key.
 // If Register is called twice with the same host or if describer is nil,
 // it panics.
@@ -30,11 +41,12 @@ func Register(host Host, describer Describer) {
 	if describer == nil {
 		panic("embd: describer is nil")
 	}
-	if _, dup := describers[host]; dup {
+	if _, dup := HostDescriber(host); dup {
 		panic("embd: describer already registered")
 	}
+	mu.RLock()
 	describers[host] = describer
-
+	mu.RUnlock()
 	glog.V(1).Infof("embd: host %v is registered", host)
 }
 

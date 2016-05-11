@@ -12,7 +12,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kidoman/embd"
+	"github.com/mattetti/embd"
+)
+
+var (
+	_ embd.DigitalPin = (*digitalPin)(nil)
 )
 
 type digitalPin struct {
@@ -31,7 +35,13 @@ type digitalPin struct {
 }
 
 func NewDigitalPin(pd *embd.PinDesc, drv embd.GPIODriver) embd.DigitalPin {
-	return &digitalPin{id: pd.ID, n: pd.DigitalLogical, drv: drv, readBuf: make([]byte, 1)}
+	dp := digitalPin{
+		id:      pd.ID,
+		n:       pd.DigitalLogical,
+		drv:     drv,
+		readBuf: make([]byte, 1),
+	}
+	return &dp
 }
 
 func (p *digitalPin) N() int {

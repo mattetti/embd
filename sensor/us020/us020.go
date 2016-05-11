@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/kidoman/embd"
+	"github.com/mattetti/embd"
 )
 
 const (
