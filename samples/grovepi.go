@@ -11,11 +11,17 @@ import (
 )
 
 var (
-	gp *grovepi.Grovepi
+	gp     *grovepi.Grovepi
+	ledpin = grovepi.D2
+	btnpin = grovepi.D3
+
+	isBlinking bool
+	blinkDelay = 80 * time.Millisecond
 )
 
-// Connect the LED to D2
-// This LED will blink for 5 seconds and the code will exit
+// Connect a LED to D2
+// Connect a button to D3
+// Press the button to toggle the LED between blinking and not
 func main() {
 	flag.Parse()
 
@@ -23,27 +29,62 @@ func main() {
 	gp = grovepi.New(bus)
 	defer gp.Close()
 
-	ledpin := grovepi.D2
+	// LED
 	err := gp.PinMode(ledpin, grovepi.Out)
 	if err != nil {
 		panic(err)
 	}
+
+	// Button
+	err = gp.PinMode(btnpin, grovepi.In)
+	if err != nil {
+		panic(err)
+	}
+
+	// channel used to communicate with the blinking
+	// code
+	stopC := make(chan bool)
+
 	// cleanup
 	defer func() {
-		gp.DigitalWrite(ledpin, 0)
+		if isBlinking {
+			stopC <- true
+		}
 	}()
 
-	stopC := make(chan bool)
-	go func() {
-		blink(ledpin, stopC)
-	}()
+	// TODO: try to use interupts instead
+	for {
+		v, err := gp.DigitalRead(btnpin)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	time.Sleep(5 * time.Second)
-	stopC <- true
+		if v == 1 {
+			fmt.Println("button pressed")
+			if isBlinking {
+				stopC <- true
+			} else {
+				go func() {
+					blink(ledpin, stopC)
+				}()
+			}
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+	}
+
 }
 
 func blink(ledpin byte, stop chan bool) {
 	var state uint8 = 1
+	isBlinking = true
+
+	defer func() {
+		isBlinking = false
+		gp.DigitalWrite(ledpin, 0)
+	}()
+
 	for {
 		select {
 		case <-stop:
@@ -53,7 +94,8 @@ func blink(ledpin byte, stop chan bool) {
 				fmt.Println(err)
 			}
 			state++
-			time.Sleep(500 * time.Millisecond)
+			fmt.Println(state)
+			time.Sleep(blinkDelay)
 		}
 	}
 }

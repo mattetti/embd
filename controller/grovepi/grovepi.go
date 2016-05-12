@@ -105,7 +105,21 @@ func (g *Grovepi) DigitalWrite(pin byte, val byte) error {
 	if err != nil {
 		return err
 	}
+	// No idea why we should wait 100ms, probably some latency
+	// TODO: copied from code examples, re-evaluate
 	time.Sleep(100 * time.Millisecond)
 
 	return nil
+}
+
+func (g *Grovepi) DigitalRead(pin byte) (byte, error) {
+	b := []byte{DIGITAL_READ, pin, 0, 0}
+	err := g.Bus.Write(g.Addr, 1, b)
+	if err != nil {
+		return 0, err
+	}
+	// TODO: copied from code examples, re-evaluate
+	time.Sleep(100 * time.Millisecond)
+
+	return g.Bus.ReadByte(g.Addr)
 }
