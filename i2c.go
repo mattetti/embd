@@ -11,6 +11,9 @@ type I2CBus interface {
 	// WriteBytes writes a slice bytes to the given address.
 	WriteBytes(addr byte, value []byte) error
 
+	// Write sends a command with its values
+	Write(addr, cmd byte, value []byte) error
+
 	// ReadFromReg reads n (len(value)) bytes from the given address and register.
 	ReadFromReg(addr, reg byte, value []byte) error
 	// ReadByteFromReg reads a byte from the given address and register.

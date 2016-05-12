@@ -22,6 +22,19 @@ const (
 	rdrwCmd  = 0x0707 // Cmd to read/write data together
 
 	rd = 0x0001
+
+	// Constants used by ioctl, from i2c-dev.h
+	I2C_SMBUS_READ           = 1
+	I2C_SMBUS_WRITE          = 0
+	I2C_SMBUS_BYTE_DATA      = 2
+	I2C_SMBUS_I2C_BLOCK_DATA = 8
+	I2C_SMBUS_BLOCK_MAX      = 32
+
+	// Talk to bus
+	I2C_SMBUS = 0x0720
+
+	// Set bus slave
+	I2C_SLAVE = 0x0703
 )
 
 type i2c_msg struct {
@@ -29,6 +42,14 @@ type i2c_msg struct {
 	flags uint16
 	len   uint16
 	buf   uintptr
+}
+
+// Data that is passed to/from ioctl calls
+type i2c_smbus_ioctl_data struct {
+	read_write uint8
+	command    uint8
+	size       int
+	data       uintptr
 }
 
 type i2c_rdwr_ioctl_data struct {
@@ -145,6 +166,37 @@ func (b *i2cBus) WriteBytes(addr byte, value []byte) error {
 		}
 
 		time.Sleep(delay * time.Millisecond)
+	}
+
+	return nil
+}
+
+func (b *i2cBus) Write(addr, command byte, data []byte) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if err := b.init(); err != nil {
+		return err
+	}
+
+	if err := b.setAddress(addr); err != nil {
+		return err
+	}
+
+	buffer := make([]byte, len(data)+1)
+	buffer[0] = byte(len(data))
+	copy(buffer[1:], data)
+
+	busData := i2c_smbus_ioctl_data{
+		read_write: I2C_SMBUS_WRITE,
+		command:    command,
+		size:       I2C_SMBUS_I2C_BLOCK_DATA,
+		data:       uintptr(unsafe.Pointer(&buffer[0])),
+	}
+
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, b.file.Fd(), I2C_SMBUS, uintptr(unsafe.Pointer(&busData)))
+	if err != 0 {
+		return syscall.Errno(err)
 	}
 
 	return nil

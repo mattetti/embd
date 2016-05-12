@@ -13,11 +13,6 @@ import (
 func main() {
 	flag.Parse()
 
-	if err := embd.InitI2C(); err != nil {
-		panic(err)
-	}
-	defer embd.CloseI2C()
-
 	bus := embd.NewI2CBus(1)
 	gp := grovepi.New(bus)
 	defer gp.Close()

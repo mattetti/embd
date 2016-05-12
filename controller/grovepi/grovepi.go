@@ -1,7 +1,6 @@
 package grovepi
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -64,7 +63,7 @@ type Grovepi struct {
 func New(bus embd.I2CBus) *Grovepi {
 	return &Grovepi{
 		Bus:  bus,
-		Addr: 0x4,
+		Addr: 0x04,
 	}
 }
 
@@ -78,12 +77,16 @@ func (g *Grovepi) Close() error {
 func (g *Grovepi) PinMode(pin byte, mode PinMode) error {
 	var b []byte
 	var modeB byte = 1
+	modeName = "output"
 	if mode == In {
 		modeB = 0
+		modeName = "input"
 	}
 
+	glog.V(1).Infof("Grovepi: setting pin %d to mode %s", pin, modeName)
+
 	b = []byte{PIN_MODE, pin, modeB, 0}
-	err := g.Bus.WriteBytes(g.Addr, b)
+	err := g.Bus.Write(g.Addr, 1, b)
 	if err != nil {
 		return err
 	}
@@ -96,8 +99,9 @@ func (g *Grovepi) DigitalWrite(pin byte, val byte) error {
 	defer g.mu.Unlock()
 
 	b := []byte{DIGITAL_WRITE, pin, val, 0}
-	fmt.Println(g.Addr, b)
-	err := g.Bus.WriteBytes(g.Addr, b)
+	glog.V(3).Infof("Grovepi: digital write to pin %d val %d", pin, val)
+
+	err := g.Bus.Write(g.Addr, 1, b)
 	if err != nil {
 		return err
 	}
@@ -105,30 +109,3 @@ func (g *Grovepi) DigitalWrite(pin byte, val byte) error {
 
 	return nil
 }
-
-/*
-device.module.Lock()
-	defer device.module.Unlock()
-
-	device.sendSlaveAddress()
-
-	buffer := make([]byte, len(data)+1)
-	buffer[0] = byte(len(data))
-	copy(buffer[1:], data)
-
-	//	buffer := make([]byte, numBytes+2)
-
-	busData := i2c_smbus_ioctl_data{
-		read_write: I2C_SMBUS_WRITE,
-		command:    command,
-		size:       I2C_SMBUS_I2C_BLOCK_DATA,
-		data:       uintptr(unsafe.Pointer(&buffer[0])),
-	}
-
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(device.module.fd.Fd()), I2C_SMBUS, uintptr(unsafe.Pointer(&busData)))
-	if err != 0 {
-		return syscall.Errno(err)
-	}
-
-	return nil
-*/
