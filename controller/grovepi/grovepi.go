@@ -77,7 +77,7 @@ func (g *Grovepi) Close() error {
 func (g *Grovepi) PinMode(pin byte, mode PinMode) error {
 	var b []byte
 	var modeB byte = 1
-	modeName = "output"
+	modeName := "output"
 	if mode == In {
 		modeB = 0
 		modeName = "input"

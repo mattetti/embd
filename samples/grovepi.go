@@ -10,44 +10,50 @@ import (
 	_ "github.com/mattetti/embd/host/rpi"
 )
 
+var (
+	gp *grovepi.Grovepi
+)
+
+// Connect the LED to D2
+// This LED will blink for 5 seconds and the code will exit
 func main() {
 	flag.Parse()
 
 	bus := embd.NewI2CBus(1)
-	gp := grovepi.New(bus)
+	gp = grovepi.New(bus)
 	defer gp.Close()
 
-	pin := grovepi.D2
-	err := gp.PinMode(pin, grovepi.Out)
+	ledpin := grovepi.D2
+	err := gp.PinMode(ledpin, grovepi.Out)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
+	// cleanup
+	defer func() {
+		gp.DigitalWrite(ledpin, 0)
+	}()
 
-	for {
-		fmt.Println("bleep")
-		if err := gp.DigitalWrite(pin, 1); err != nil {
-			fmt.Println(err)
-		}
-		time.Sleep(500 * time.Millisecond)
-		if err := gp.DigitalWrite(pin, 0); err != nil {
-			fmt.Println(err)
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
+	stopC := make(chan bool)
+	go func() {
+		blink(ledpin, stopC)
+	}()
 
+	time.Sleep(5 * time.Second)
+	stopC <- true
 }
 
-/*
-var g grovepi.GrovePi
-	g = *grovepi.InitGrovePi(0x04)
-	err := g.PinMode(grovepi.D2, "output")
-	if err != nil {
-		fmt.Println(err)
-	}
+func blink(ledpin byte, stop chan bool) {
+	var state uint8 = 1
 	for {
-		g.DigitalWrite(grovepi.D2, 1)
-		time.Sleep(500 * time.Millisecond)
-		g.DigitalWrite(grovepi.D2, 0)
-		time.Sleep(500 * time.Millisecond)
+		select {
+		case <-stop:
+			return
+		default:
+			if err := gp.DigitalWrite(ledpin, byte(state%2)); err != nil {
+				fmt.Println(err)
+			}
+			state++
+			time.Sleep(500 * time.Millisecond)
+		}
 	}
-*/
+}
